@@ -42,13 +42,15 @@ This build does not target ARM64 natively or 32-bit Windows.
 
 For end users:
 - A complete copy of the application output folder, including runtime files.
-- Microsoft Visual C++ 2015-2022 Redistributable, x64.
+- Latest Microsoft Visual C++ v14 Redistributable, x64, at least as new as
+  the MSVC build tools used to compile the application:
+  https://aka.ms/vc14/vc_redist.x64.exe
 - Permission to write to their Windows Local App Data folder.
 - Microsoft Print to PDF enabled for PDF export, or a printer for paper output.
 - Company-approved secure storage for exported payroll data and backups.
 
 For building:
-- Visual Studio 2022 or its Build Tools, with MSVC v143 x64 C++ tools.
+- Visual Studio 2026 (18.x) or its Build Tools, with MSVC v145 x64 C++ tools.
 - Desktop development with C++ and Windows 11 SDK 10.0.26100.0.
 - WinUI C++ development tools recommended for Visual Studio project editing.
 - PowerShell 5.1 or newer and internet access for the first NuGet restore.
@@ -65,15 +67,19 @@ On a Windows 11 development workstation:
 3. To build and launch: .\build.ps1 -Launch
 4. For a debug build: .\build.ps1 -Configuration Debug
 
-The script locates Visual Studio 2022, restores pinned NuGet packages and builds
+The script locates Visual Studio 2026, restores pinned NuGet packages and builds
 Payrollix.vcxproj. It downloads the NuGet CLI from Microsoft's official endpoint
 if it is not already available. It does not install Visual Studio or change
 PowerShell execution policy. Follow company policy if downloaded scripts are
 blocked; do not disable protections globally.
 
-Alternatively, open Payrollix.sln in Visual Studio 2022, restore the packages
+Alternatively, open Payrollix.sln in Visual Studio 2026, restore the packages
 into the project's packages directory, select Release/x64 and build.
 Application builds use MSBuild, not CMake.
+
+The project targets the v145 toolset; older Visual Studio installations are not
+selected by the build script. The Windows CI workflow also explicitly uses
+Visual Studio 2026 and builds the native tests with the same toolset.
 
 Release output: bin\x64\Release\PayrollApp.exe
 Distribute the ENTIRE Release directory, not the executable alone. The build

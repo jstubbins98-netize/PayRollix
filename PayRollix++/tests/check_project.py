@@ -42,6 +42,15 @@ def main():
     configured = {path.name for path in sources}
     assert {path.name for path in (ROOT / "src").glob("*.cpp")} == configured, "Unbuilt source files"
     assert project.find(".//m:WindowsTargetPlatformMinVersion", NS).text == "10.0.22000.0"
+    assert project.find(".//m:PlatformToolset", NS).text == "v145", "Use the VS 2026 C++ toolset"
+    solution = (ROOT / "Payrollix.sln").read_text()
+    assert "# Visual Studio Version 18\n" in solution
+    assert "VisualStudioVersion = 18." in solution
+    build_script = (ROOT / "build.ps1").read_text()
+    assert '-version "[18.0,19.0)"' in build_script, "Discover VS 2026, not older MSBuild"
+    workflow = (ROOT.parent / ".github/workflows/windows-build.yml").read_text()
+    assert "runs-on: windows-2025-vs2026" in workflow
+    assert '-G "Visual Studio 18 2026" -A x64 -T v145' in workflow
     platform = (ROOT / "src/Platform.cpp").read_text()
     assert "version.dwBuildNumber >= 22000" in platform and "VER_NT_WORKSTATION" in platform
     main_source = (ROOT / "src/main.cpp").read_text()
@@ -56,7 +65,7 @@ def main():
         assert {"users", "payroll", "departments", "pay_periods", "employment_history", "audit_log",
                 "payslips", "winui_payslip_details"}.issubset(tables)
         assert db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
-    print("PASS: project files, pinned imports, Win11 gate, Qt removal, schema, and identical manuals.")
+    print("PASS: project files, VS 2026 toolchain, pinned imports, Win11 gate, Qt removal, schema, and identical manuals.")
     print("This is NOT a Windows compiler or WinUI runtime check.")
 
 
