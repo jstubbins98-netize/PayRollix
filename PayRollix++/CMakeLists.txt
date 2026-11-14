@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(Payrollix LANGUAGES CXX)
+if(NOT WIN32)
+    message(FATAL_ERROR "Payrollix++ is Windows 11-only. Build Payrollix.vcxproj with Visual Studio 2022/MSBuild on Windows 11. Portable core tests: cmake -S tests -B build-tests")
+endif()
+message(FATAL_ERROR "WinUI 3 requires the NuGet/MSBuild targets in Payrollix.vcxproj. Use .\\build.ps1 or open Payrollix.sln in Visual Studio 2022. Qt and CMake are no longer application dependencies.")
