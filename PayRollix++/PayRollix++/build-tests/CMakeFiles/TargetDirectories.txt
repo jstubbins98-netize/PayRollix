@@ -1,6 +1,0 @@
-/home/runner/workspace/PayRollix++/build-tests/CMakeFiles/core_tests.dir
-/home/runner/workspace/PayRollix++/build-tests/CMakeFiles/windows_version_tests.dir
-/home/runner/workspace/PayRollix++/build-tests/CMakeFiles/qt_ui_check.dir
-/home/runner/workspace/PayRollix++/build-tests/CMakeFiles/test.dir
-/home/runner/workspace/PayRollix++/build-tests/CMakeFiles/edit_cache.dir
-/home/runner/workspace/PayRollix++/build-tests/CMakeFiles/rebuild_cache.dir
