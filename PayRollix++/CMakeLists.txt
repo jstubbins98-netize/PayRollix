@@ -31,7 +31,7 @@ qt_standard_project_setup()
 qt_add_executable(PayrollApp WIN32
     src/main.cpp src/AppWindow.cpp src/EmployeeViews.cpp src/AdminViews.cpp
     src/ReportViews.cpp src/Store.cpp src/Security.cpp src/Platform.cpp
-    src/PayrollCalculator.cpp app.manifest
+    src/PayrollCalculator.cpp src/ExcelExport.cpp app.manifest
 )
 target_include_directories(PayrollApp PRIVATE include)
 target_compile_definitions(PayrollApp PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN

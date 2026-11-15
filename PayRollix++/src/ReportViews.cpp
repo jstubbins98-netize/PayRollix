@@ -1,4 +1,5 @@
 #include "AppWindow.h"
+#include "ExcelExport.h"
 #include "Platform.h"
 #include "Ui.h"
 
@@ -59,6 +60,7 @@ void AppWindow::Reports() {
         std::string sql;
         std::vector<std::wstring> headers;
         std::vector<std::string> keys;
+        std::vector<size_t> numericColumns;
         switch (type->currentIndex()) {
         case 0:
             sql = "SELECT p.name,COALESCE(d.name,'Unassigned') AS department,"
@@ -67,6 +69,7 @@ void AppWindow::Reports() {
                   "printf('%.2f',p.net) AS net,COALESCE(p.status,'active') AS status" + join + where + " ORDER BY p.name";
             headers = {L"Employee",L"Department",L"Gross ($)",L"Deductions ($)",L"Net ($)",L"Status"};
             keys = {"name","department","gross","deductions","net","status"};
+            numericColumns = {2,3,4};
             break;
         case 1:
             sql = "SELECT COALESCE(d.name,'Unassigned') AS department,COUNT(*) AS employees,"
@@ -74,6 +77,7 @@ void AppWindow::Reports() {
                   "printf('%.2f',AVG(p.gross_salary)) AS average" + join + where + " GROUP BY d.id ORDER BY d.name";
             headers = {L"Department",L"Employees",L"Gross ($)",L"Net ($)",L"Average base ($)"};
             keys = {"department","employees","gross","net","average"};
+            numericColumns = {1,2,3,4};
             break;
         case 2:
             sql = "SELECT p.name,p.role,COALESCE(d.name,'Unassigned') AS department,p.email,p.phone,p.hire_date,"
@@ -88,6 +92,7 @@ void AppWindow::Reports() {
                   "printf('%.2f',p.other_deductions) AS other" + join + where + " ORDER BY p.name";
             headers = {L"Employee",L"Federal ($)",L"State ($)",L"Social Security ($)",L"Medicare ($)",L"Health ($)",L"401(k) ($)",L"Other ($)"};
             keys = {"name","federal","state","ss","medicare","health","retirement","other"};
+            numericColumns = {1,2,3,4,5,6,7};
         }
         auto rows = store_->Query(sql, params);
         auto cells = Cells(rows, keys);
@@ -103,6 +108,20 @@ void AppWindow::Reports() {
         table->setMaximumHeight(500);
         outputLayout->addWidget(table);
         outputLayout->addWidget(ui::Text(L"Export uses the generated rows below, even if you change filters afterwards. Generate again to refresh."));
+        outputLayout->addWidget(ui::Action(L"Export generated report to ODF Spreadsheet (.ods)", [this,headers,cells,numericColumns] {
+            auto file = platform::ChooseFile(hwnd_, true, L"ods", L"Export report for LibreOffice Calc");
+            if (file.empty()) return;
+            ExportOds(file, headers, cells, numericColumns);
+            store_->Audit("EXPORT", "reports", 0, "Exported generated report to ODF Spreadsheet (.ods)");
+            Message(L"ODF spreadsheet exported.");
+        }, this));
+        outputLayout->addWidget(ui::Action(L"Export generated report to Excel (.xlsx)", [this,headers,cells,numericColumns] {
+            auto file = platform::ChooseFile(hwnd_, true, L"xlsx", L"Export report to Excel");
+            if (file.empty()) return;
+            ExportExcel(file, headers, cells, numericColumns);
+            store_->Audit("EXPORT", "reports", 0, "Exported generated report to Excel (.xlsx)");
+            Message(L"Excel workbook exported.");
+        }, this));
         outputLayout->addWidget(ui::Action(L"Export generated report to CSV", [this,headers,cells] {
             auto file = platform::ChooseFile(hwnd_, true, L"csv", L"Export report");
             if (file.empty()) return;
@@ -154,6 +173,20 @@ void AppWindow::Audit() {
         auto* table = ui::Table(headers, cells, output);
         table->setMaximumHeight(500);
         outputLayout->addWidget(table);
+        outputLayout->addWidget(ui::Action(L"Export filtered log to ODF Spreadsheet (.ods)", [this,headers,cells] {
+            auto file = platform::ChooseFile(hwnd_, true, L"ods", L"Export audit log for LibreOffice Calc");
+            if (file.empty()) return;
+            ExportOds(file, headers, cells, {0,5});
+            store_->Audit("EXPORT", "audit_log", 0, "Exported filtered audit log to ODF Spreadsheet (.ods)");
+            Message(L"ODF audit spreadsheet exported.");
+        }, this));
+        outputLayout->addWidget(ui::Action(L"Export filtered log to Excel (.xlsx)", [this,headers,cells] {
+            auto file = platform::ChooseFile(hwnd_, true, L"xlsx", L"Export audit log to Excel");
+            if (file.empty()) return;
+            ExportExcel(file, headers, cells, {0,5});
+            store_->Audit("EXPORT", "audit_log", 0, "Exported filtered audit log to Excel (.xlsx)");
+            Message(L"Excel audit workbook exported.");
+        }, this));
         outputLayout->addWidget(ui::Action(L"Export filtered log to CSV", [this,headers,cells] {
             auto file = platform::ChooseFile(hwnd_, true, L"csv", L"Export audit log");
             if (file.empty()) return;

@@ -122,6 +122,12 @@ void Store::Initialize() {
             sqlite3_free(error);
             throw std::runtime_error(message);
         }
+        // Bootstrap only an empty database; never reset existing credentials.
+        if (!HasUsers()) {
+            Exec("INSERT INTO users(username,password_hash,full_name,role) VALUES(?,?,?,'admin')",
+                 {std::string("admin"), security::Hash("ChangeMe123!"), std::string("Administrator")});
+            Audit("CREATE", "users", 0, "Default administrator created");
+        }
     });
 }
 void Store::Audit(std::string const& a, std::string const& t, int id, std::string const& d) {
@@ -158,13 +164,28 @@ bool Store::Login(std::string const& u, std::string const& p) {
 }
 void Store::ChangePassword(std::string const& oldPassword, std::string const& p) {
     PasswordPolicy(p);
+    ChangeCredentials(oldPassword, username_, p);
+}
+bool Store::DefaultCredentialsInUse() {
+    auto rows = Query("SELECT password_hash FROM users WHERE username='admin'");
+    return rows.size() == 1 && security::Verify("ChangeMe123!", Get(rows[0], "password_hash"));
+}
+void Store::ChangeCredentials(std::string const& oldPassword, std::string const& u, std::string const& p) {
+    if (u.empty() || u.find_first_not_of(" \t\r\n") == std::string::npos)
+        throw std::runtime_error("Enter a username.");
+    // An empty new password means keep the current password (username-only change).
+    if (!p.empty()) PasswordPolicy(p);
     auto r = Query("SELECT password_hash FROM users WHERE id=?", {userId_});
     if (r.empty() || !security::Verify(oldPassword, Get(r[0], "password_hash")))
         throw std::runtime_error("The current password is incorrect.");
     Transaction([&] {
-        Exec("UPDATE users SET password_hash=? WHERE id=?", {security::Hash(p), userId_});
-        Audit("UPDATE", "users", userId_, "Changed password");
+        if (!Query("SELECT id FROM users WHERE username=? AND id<>?", {u, userId_}).empty())
+            throw std::runtime_error("That username is already in use.");
+        Exec("UPDATE users SET username=?,password_hash=? WHERE id=?",
+             {u, p.empty() ? Get(r[0], "password_hash") : security::Hash(p), userId_});
+        Audit("UPDATE", "users", userId_, p.empty() ? "Changed username" : "Changed account credentials");
     });
+    username_ = u;
 }
 void Store::SignOut() {
     if (userId_) Audit("LOGOUT", "users", userId_, "Signed out");

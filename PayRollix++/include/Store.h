@@ -32,6 +32,9 @@ public:
     bool HasUsers();
     bool Login(std::string const& username, std::string const& password);
     void CreateAdmin(std::string const& username, std::string const& password);
+    bool DefaultCredentialsInUse();
+    void ChangeCredentials(std::string const& oldPassword, std::string const& username,
+                           std::string const& password);
     void ChangePassword(std::string const& oldPassword, std::string const& password);
     int SaveEmployee(Row const& fields, int id = 0);
     void DeleteEmployee(int id);

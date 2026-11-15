@@ -122,31 +122,21 @@ int AppWindow::SelectedId(QTableWidget const* table, Rows const& rows) {
 }
 
 void AppWindow::Login() {
-    bool first = !store_->HasUsers();
+    bool first = store_->DefaultCredentialsInUse();
     auto* page = Page(first ? L"Set up Payrollix++" : L"Welcome back",
-        first ? L"Create the first administrator, or import your existing Payrollix++ database. No default password is created."
+        first ? L"Starter login: admin / ChangeMe123! — change these shared credentials under Account before entering payroll data, or import your existing database."
               : L"Sign in to your local payroll workspace.");
     page->setMaximumWidth(720);
     auto* layout = qobject_cast<QVBoxLayout*>(page->layout());
     auto* username = ui::Input(L"Username");
-    QLineEdit *password = nullptr, *repeat = nullptr;
+    QLineEdit* password = nullptr;
     auto* passField = PasswordField(QStringLiteral("Password"), password);
-    QWidget* repeatField = first ? PasswordField(QStringLiteral("Confirm password"), repeat) : nullptr;
     layout->insertWidget(1, username);
     layout->insertWidget(2, passField);
-    if (first) layout->insertWidget(3, repeatField);
-    int position = first ? 4 : 3;
-    layout->insertWidget(position++, ui::Action(first ? L"Create administrator" : L"Sign in",
-        [this, username, password, repeat, first] {
+    int position = 3;
+    layout->insertWidget(position++, ui::Action(L"Sign in",
+        [this, username, password] {
             std::string user = S(username->text()), pass = S(password->text());
-            if (first) {
-                if (password->text() != repeat->text())
-                    throw std::runtime_error("Passwords do not match.");
-                store_->CreateAdmin(user, pass);
-                Login();
-                Message(L"Administrator created. Sign in to continue.");
-                return;
-            }
             if (std::chrono::steady_clock::now() < retryAfter_)
                 throw std::runtime_error("Too many attempts. Wait 30 seconds before retrying.");
             if (!store_->Login(user, pass)) {
@@ -160,7 +150,7 @@ void AppWindow::Login() {
             failedLogins_ = 0;
             password->clear();
             Shell();
-            if (pass == "admin123") {
+            if (pass == "admin123" || pass == "ChangeMe123!") {
                 Account();
                 Message(L"The original default password is still in use. Change it before entering company information.", true);
             }
@@ -271,18 +261,22 @@ void AppWindow::Dashboard() {
 }
 
 void AppWindow::Account() {
-    auto* page = Page(L"Account", L"Signed in as " + W(store_->Username()) + L". Change your local application password here.");
+    auto* page = Page(L"Account", L"Signed in as " + W(store_->Username()) + L". Change your username and/or password at any time.");
     auto* layout = qobject_cast<QVBoxLayout*>(page->layout());
     QLineEdit *current = nullptr, *next = nullptr, *repeat = nullptr;
     layout->insertWidget(1, PasswordField(QStringLiteral("Current password"), current));
-    layout->insertWidget(2, PasswordField(QStringLiteral("New password (at least 12 characters)"), next));
-    layout->insertWidget(3, PasswordField(QStringLiteral("Confirm new password"), repeat));
-    layout->insertWidget(4, ui::Action(L"Change password", [this, current, next, repeat] {
+    auto* username = ui::Input(L"Username");
+    username->setText(QString::fromStdString(store_->Username()));
+    layout->insertWidget(2, username);
+    layout->insertWidget(3, PasswordField(QStringLiteral("New password (12+ characters; leave blank to keep current)"), next));
+    layout->insertWidget(4, PasswordField(QStringLiteral("Confirm new password"), repeat));
+    layout->insertWidget(5, ui::Action(L"Save credentials", [this, username, current, next, repeat] {
         if (next->text() != repeat->text()) throw std::runtime_error("Passwords do not match.");
-        store_->ChangePassword(S(current->text()), S(next->text()));
-        current->clear(); next->clear(); repeat->clear();
-        Message(L"Password changed.");
+        store_->ChangeCredentials(S(current->text()), S(username->text()), S(next->text()));
+        Shell();
+        Account();
+        Message(L"Account credentials saved. Use the updated credentials next time you sign in.");
     }, this, true));
-    layout->insertWidget(5, ui::Text(L"Passwords use Windows BCrypt PBKDF2-SHA256 with a random salt. Existing SHA-256 passwords are upgraded on successful sign-in. Local database access is governed by Windows folder permissions; this is not a multi-user server or a role-based approval system."));
+    layout->insertWidget(6, ui::Text(L"Passwords use Windows BCrypt PBKDF2-SHA256 with a random salt. Existing SHA-256 passwords are upgraded on successful sign-in. Local database access is governed by Windows folder permissions; this is not a multi-user server or a role-based approval system."));
     Display(page);
 }

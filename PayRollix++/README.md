@@ -3,8 +3,6 @@
 Windows 11 edition | C++17 and Qt 6 Widgets | Visual Studio 2026
 
 This manual is intended for company leadership, payroll operators and IT staff.
-README.md and README.txt contain exactly the same UTF-8 text. Markdown headings
-remain readable in a plain-text editor.
 
 ## 1. Overview and operating limits
 
@@ -150,15 +148,17 @@ that switch never bypasses the application's startup restriction.
 ## 4. First launch and existing databases
 
 On first launch, choose one of these paths:
-1. Enter a username and a password of at least 12 characters, confirm the
-   password, select Create administrator, and then sign in.
+1. Sign in with username `admin` and starter password `ChangeMe123!`.
+   The app opens Account and warns you to replace these shared credentials
+   before entering company information.
 2. Select Import existing database and choose an untouched copy of the previous
    payroll.db or a complete Payrollix++ SQLite backup. Sign in using that
    database's existing credentials.
 
-New databases have no default administrator password. Old databases may still
-contain their original default login. Change any default password immediately
-under Account.
+Only databases with no users receive the starter administrator. Existing users,
+usernames and passwords are never reset or replaced during an update or restart.
+The starter password is public, not a secret: change it immediately under Account.
+Passwords are stored as salted hashes, not plaintext.
 
 Live data is stored per Windows account:
 %LOCALAPPDATA%\Payrollix\payroll.db
@@ -181,8 +181,12 @@ the signed-in user on new audit entries.
 How to use:
 1. Enter your username and password on the welcome screen and select Sign in.
 2. After five unsuccessful attempts, wait 30 seconds before retrying.
-3. Select Account to change your password. Supply your current password and
-   enter the new password twice.
+3. Select Account at any time to change your username, password, or both.
+   Supply your current password, edit the username, and enter the new password
+   twice (at least 12 characters), then select Save credentials. Leave both
+   new-password fields blank to change only the username. A blank username or
+   a username already used by another account is rejected. The new credentials
+   take effect immediately and remain in place after restarting.
 4. Select Sign out before leaving an unattended workstation.
 
 Existing Qt SHA-256 password hashes are recognized and upgraded to salted
@@ -373,7 +377,7 @@ Workplace application: check the selected period and distribute via approved
 secure channels. The app does not email statements or certify legal payslip
 content requirements.
 
-## 15. Reports and CSV export
+## 15. Reports and Excel / ODS / CSV export
 
 What it does: produces four reports from current employee records:
 - Payroll Summary: employee, department, gross including overtime, deductions,
@@ -386,14 +390,38 @@ How to use:
 1. Select Reports and choose a report type and optional department.
 2. Optionally enter Updated from / Updated to dates as YYYY-MM-DD.
 3. Select Generate report and review the rows and totals.
-4. Select Export generated report to CSV and choose a destination.
-5. Open the CSV in a spreadsheet or import it into an approved system.
+4. Select Export generated report to Excel (.xlsx) and choose a destination.
+   Open the saved workbook in Microsoft Excel. Excel does not need to be
+   installed on the computer performing the export.
+5. Alternatively, select Export generated report to CSV for plain-text
+   spreadsheet imports or other approved systems.
+6. For LibreOffice Calc, select Export generated report to ODF Spreadsheet
+   (.ods), choose a destination and open the saved file in Calc. LibreOffice
+   does not need to be installed on the computer performing the export.
 
 All report filters apply to the generated report. Dates filter the employee
 record's last update date in UTC, not a historical pay period. Leave dates blank
 for all current records. Reports include all statuses unless their department
 or update-date filters exclude them. Generate again after changing filters.
-CSV exports exactly the generated rows, even if filters are edited afterwards.
+All three formats export exactly the generated rows and column headings, even if
+filters are edited afterwards. A report with no matches exports headings only.
+
+Excel export creates a genuine .xlsx workbook, not a renamed CSV file.
+Amounts and employee counts are numeric cells, suitable for totals and sorting.
+Names, phone numbers, dates and other text remain literal text, preserving
+leading zeros and preventing user-entered text from executing as formulas.
+Unicode characters and multiline text are preserved. The workbook contains
+one worksheet with the generated data; it is not a full database backup and
+does not include credentials. Save exports in an approved, protected location.
+If a workbook is open in Excel or a folder is not writable, close the workbook
+or select another destination and retry. Excel's worksheet and cell size
+limits are enforced rather than silently dropping records or truncating text.
+
+ODS export creates a native ODF 1.2 spreadsheet package, not a renamed CSV or
+Excel workbook. Like Excel export, it keeps amounts/counts numeric and names,
+phone numbers, dates and notes as literal text, with Unicode, leading zeros,
+spaces, tabs and line breaks preserved. It contains one worksheet and uses the
+same conservative row, column and cell-text limits as Excel export.
 
 CSV is UTF-8 with a byte-order mark, quoted fields, escaped double quotes and
 Windows line endings. Values that could be interpreted as spreadsheet formulas
@@ -413,7 +441,11 @@ How to use:
 2. Choose an action and optional From / To dates.
 3. Select Apply filters / refresh to display matching records.
 4. Review UTC timestamp, username, action, table, record ID and details.
-5. Select Export filtered log to CSV to save the displayed result.
+5. Select Export filtered log to Excel (.xlsx), Export filtered log to ODF
+   Spreadsheet (.ods), or Export filtered log to CSV to save the displayed
+   result. Excel and ODS exports keep IDs numeric and all
+   descriptions and usernames as literal text. The export action itself is
+   logged after the file is saved; refresh to see that new activity entry.
 
 Usefulness: helps IT and managers investigate application actions.
 Workplace application: review unusual changes and store approved exports in

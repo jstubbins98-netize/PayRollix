@@ -38,17 +38,45 @@ int main() {
         {
             Store s(directory / "payroll.db");
             s.Initialize();
-            Require(!s.HasUsers(),"Fresh database should not have default credentials");
+            Require(s.HasUsers(),"Fresh database should have a default administrator");
+            Require(s.DefaultCredentialsInUse(),"Starter credentials were not detected");
+            Require(s.Login("admin","ChangeMe123!"),"Default administrator login failed");
+            Require(Get(s.Query("SELECT role,password_hash FROM users")[0], "role")=="admin",
+                    "Default user is not an administrator");
+            Require(Get(s.Query("SELECT password_hash FROM users")[0], "password_hash")!="ChangeMe123!",
+                    "Default password stored as plaintext");
             Reject([&]{ s.CreateAdmin("admin","short"); },"Weak new password accepted");
-            s.CreateAdmin("admin","safe-test-password");
-            Require(s.HasUsers(),"Administrator not created");
             Reject([&]{ s.CreateAdmin("another","safe-test-password"); },"Second bootstrap administrator accepted");
+            Reject([&]{ s.ChangeCredentials("wrong","owner","safe-test-password"); },"Wrong current password accepted");
+            Reject([&]{ s.ChangeCredentials("ChangeMe123!","   ","safe-test-password"); },"Blank username accepted");
+            Reject([&]{ s.ChangeCredentials("ChangeMe123!","owner","short"); },"Weak replacement password accepted");
+            s.ChangeCredentials("ChangeMe123!","owner","safe-test-password");
+            Require(s.Username()=="owner","Signed-in username did not update");
+            Require(!s.DefaultCredentialsInUse(),"Starter credentials still detected");
+            Require(!s.Login("admin","ChangeMe123!"),"Old default login still accepted");
+            s.SignOut();
+            s.Initialize();
+            Require(s.Query("SELECT id FROM users").size()==1,"Initialization recreated default account");
+            Require(s.Login("owner","safe-test-password"),"Changed credentials did not persist");
+            s.ChangeCredentials("safe-test-password","admin","");
+            Require(s.Login("admin","safe-test-password"),"Username-only change lost password");
+            auto occupied = s.Exec("INSERT INTO users(username,password_hash) VALUES(?,?)",
+                                  {std::string("occupied"), security::Hash("other-password")});
+            Reject([&]{ s.ChangeCredentials("safe-test-password","occupied","changed-password"); },
+                   "Duplicate username accepted");
+            Require(s.Username()=="admin" && s.Login("admin","safe-test-password"),
+                    "Failed credential change altered account");
+            s.Exec("DELETE FROM users WHERE id=?", {occupied});
             Require(!s.Login("admin","incorrect"),"Bad password accepted");
             Require(s.Login("admin","safe-test-password"),"Login failed");
             Require(s.UserId()>0,"User attribution missing");
             s.ChangePassword("safe-test-password","replacement-password");
             Require(!s.Login("admin","safe-test-password"),"Old password still accepted");
             Require(s.Login("admin","replacement-password"),"Changed password not accepted");
+            s.SignOut();
+            Reject([&]{ s.ChangeCredentials("replacement-password","outsider","changed-password"); },
+                   "Signed-out credential change accepted");
+            Require(s.Login("admin","replacement-password"),"Re-login failed");
             Require(ValidDate("2024-02-29") && !ValidDate("2026-02-29"),"Leap day validation failed");
             Require(!ValidDate("2026-13-01") && !ValidDate("2026-01-00"),"Date validation failed");
             auto calculation = PayrollCalculator::calculate(5000,10,25,1.5,100,200,50);
