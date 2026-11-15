@@ -29,6 +29,9 @@ def main():
     assert '-version "[18.0,19.0)"' in build_script
     assert '-G "Visual Studio 18 2026" -A x64 -T v145' in build_script
     assert "windeployqt.exe" in build_script
+    assert '& $deploy $deployMode --no-translations --no-compiler-runtime (Join-Path $output "PayrollApp.exe")' in build_script
+    assert "$env:ComSpec" not in build_script, "Do not nest deployment inside cmd.exe quote parsing"
+    assert "VsDevCmd.bat" not in build_script, "Deployment must not require a developer shell"
     assert "cmake\\FindPayrollQt.cmake" in build_script
     assert "payrollix_find_qt(_payrollix_qt)" in cmake
     launcher = (ROOT / "build.bat").read_text()

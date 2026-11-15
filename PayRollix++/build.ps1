@@ -35,10 +35,10 @@ $deploy = Join-Path $QtRoot "bin\windeployqt.exe"
 if (-not (Test-Path $deploy)) { throw "Qt deployment tool missing: $deploy" }
 $deployMode = "--release"
 if ($Configuration -eq "Debug") { $deployMode = "--debug" }
-# windeployqt may need the MSVC tools for compiler-runtime discovery.
-$devcmd = Join-Path $installations[0] "Common7\Tools\VsDevCmd.bat"
-$command = "`"$devcmd`" -arch=x64 -host_arch=x64 >nul && `"$deploy`" $deployMode --no-translations `"$output\PayrollApp.exe`""
-& $env:ComSpec /d /s /c "`"$command`""
+# Invoke the executable directly so paths containing spaces remain single arguments.
+# The VC++ Redistributable is installed separately on target PCs; do not depend
+# on a developer command prompt just to discover/copy compiler runtime files.
+& $deploy $deployMode --no-translations --no-compiler-runtime (Join-Path $output "PayrollApp.exe")
 if ($LASTEXITCODE -ne 0) { throw "Qt deployment failed ($LASTEXITCODE)." }
 Write-Host "Built and deployed Qt runtime files to $output"
 Write-Host "Distribute the ENTIRE folder with Qt license notices; install the latest x64 Visual C++ v14 Redistributable."

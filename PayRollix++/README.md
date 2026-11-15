@@ -135,6 +135,9 @@ Visual Studio 2026 and builds the native tests with the same toolset.
 Release output: bin\x64\Release\PayrollApp.exe
 Distribute the ENTIRE Release directory, not the executable alone. The build
 copies Qt runtime DLLs and the platforms\qwindows.dll plugin beside the executable.
+Deployment calls windeployqt directly, including for installation paths with spaces.
+Compiler runtime copying is disabled; install the Visual C++ Redistributable
+separately as described below, rather than relying on a developer command prompt.
 Include the applicable Qt license notices and fulfill your distribution license
 obligations; windeployqt alone is not a licensing compliance process. Install the x64
 Visual C++ Redistributable separately on target computers. Run as a regular
