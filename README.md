@@ -1,6 +1,6 @@
 # Payrollix++ User Manual
 
-Windows 11 edition | C++17, C++/WinRT and Microsoft WinUI 3
+Windows 11 edition | C++17 and Qt 6 Widgets | Visual Studio 2026
 
 This manual is intended for company leadership, payroll operators and IT staff.
 README.md and README.txt contain exactly the same UTF-8 text. Markdown headings
@@ -10,9 +10,11 @@ remain readable in a plain-text editor.
 
 Payrollix++ maintains local employee records, estimates payroll, stores processed
 payslips and exports reports. It is a Windows desktop application, not a website.
-The interface uses Microsoft's WinUI 3 controls through the Windows App SDK.
-Qt is no longer required. WinUI 3 is distributed with this application; it is
-not an operating-system component guaranteed to be installed with Windows 11.
+The interface uses Qt 6 Widgets. Qt runtime libraries and its Windows platform
+plugin are distributed with the application. Windows App SDK, WinUI and
+C++/WinRT packages are no longer required. Qt's cross-platform capabilities
+do not make this application cross-platform: its build and startup checks
+restrict the program to Windows 11.
 
 IMPORTANT: The inherited payroll formula is an estimate, not a compliant tax
 engine. It assumes monthly salary, annualizes by multiplying by 12, applies
@@ -42,42 +44,99 @@ This build does not target ARM64 natively or 32-bit Windows.
 
 For end users:
 - A complete copy of the application output folder, including runtime files.
-- Microsoft Visual C++ 2015-2022 Redistributable, x64.
+- Latest Microsoft Visual C++ v14 Redistributable, x64, at least as new as
+  the MSVC build tools used to compile the application:
+  https://aka.ms/vc14/vc_redist.x64.exe
 - Permission to write to their Windows Local App Data folder.
 - Microsoft Print to PDF enabled for PDF export, or a printer for paper output.
 - Company-approved secure storage for exported payroll data and backups.
 
 For building:
-- Visual Studio 2022 or its Build Tools, with MSVC v143 x64 C++ tools.
+- Visual Studio 2026 (18.x) or its Build Tools, with MSVC v145 x64 C++ tools.
 - Desktop development with C++ and Windows 11 SDK 10.0.26100.0.
-- WinUI C++ development tools recommended for Visual Studio project editing.
-- PowerShell 5.1 or newer and internet access for the first NuGet restore.
+- CMake 4.1 or newer, available through Visual Studio's C++ CMake tools.
+- Qt 6.9 or newer, MSVC x64 desktop kit (for example Qt 6.9.3 msvc2022_64).
+  The MSVC 2022 Qt binary kit is ABI-compatible with the v145 compiler.
+  Do not use a MinGW, 32-bit or ARM64 kit.
+- PowerShell 5.1 or newer.
 
-Dependencies and versions are pinned in packages.config. Native WinUI,
-Foundation, Interactive Experiences and runtime components are referenced
-explicitly. WebView2 is a WinUI build dependency; the app does not embed a browser.
+Install Qt using an authorized Qt distribution and comply with its commercial
+or applicable open-source license. No Qt or Windows App SDK packages are
+silently downloaded by the build script. Windows CI uses Qt 6.9.3.
 
 ## 3. Build, distribution and launch
 
+Installation and launch: open PowerShell in the project root, with the
+prerequisites above installed, and run:
+
+```powershell
+cd PayRollix++
+.\build.bat -Launch
+```
+
+The build automatically looks for Qt 6.9 or newer with the shared MSVC x64
+desktop libraries, Widgets, Windows platform plugin and deployment tools.
+It checks QTDIR, QT_ROOT_DIR, Qt6_DIR and CMAKE_PREFIX_PATH settings, Qt tools on
+PATH, then common locations such as C:\Qt, other drive-root Qt folders,
+your user Qt folder, Local App Data and Program Files Qt folders.
+The newest compatible kit within the first successful search group is chosen,
+and its path and version are printed before the build.
+
+If no compatible kit is found, compilation stops with an error explaining
+what to install and how to select a custom folder. Older versions, MinGW,
+ARM64 and incomplete kits are rejected. Qt is not downloaded automatically.
+
+For a custom location, this explicit PowerShell command remains supported:
+
+```powershell
+cd PayRollix++
+.\build.ps1 -QtRoot C:\Qt\6.9.3\msvc2022_64 -Launch
+```
+
+To run through the Windows BAT launcher instead:
+
+```powershell
+cd PayRollix++
+.\build.bat -QtRoot "C:\Qt\6.9.3\msvc2022_64" -Launch
+```
+
+Run either command block from the project root, not one after the other.
+The BAT launcher permits script execution only for its PowerShell process;
+it does not change saved execution policies, unblock files permanently, or
+request administrator access. Organization-enforced policies still apply.
+It forwards options to build.ps1 and returns its exit code. You can also
+double-click build.bat to find Qt automatically; with no options,
+it builds without launching the app and waits for a key before closing.
+
 On a Windows 11 development workstation:
 1. Open PowerShell in the PayRollix++ directory.
-2. Run: .\build.ps1
-3. To build and launch: .\build.ps1 -Launch
-4. For a debug build: .\build.ps1 -Configuration Debug
+2. Run: .\build.ps1 (or .\build.bat) to discover Qt and build.
+3. To build and launch, add: -Launch
+4. For a debug build, add: -Configuration Debug
+5. Optionally select a kit with -QtRoot or one of the environment settings above.
+   An invalid explicit -QtRoot fails rather than silently choosing another kit.
 
-The script locates Visual Studio 2022, restores pinned NuGet packages and builds
-Payrollix.vcxproj. It downloads the NuGet CLI from Microsoft's official endpoint
-if it is not already available. It does not install Visual Studio or change
-PowerShell execution policy. Follow company policy if downloaded scripts are
-blocked; do not disable protections globally.
+The script locates Visual Studio 2026, configures CMake with the v145 toolset,
+builds the application and runs Qt's windeployqt to copy its runtime files.
+It does not install Visual Studio or Qt, or change PowerShell execution policy.
+Follow company policy if scripts are blocked; do not disable protections globally.
 
-Alternatively, open Payrollix.sln in Visual Studio 2022, restore the packages
-into the project's packages directory, select Release/x64 and build.
-Application builds use MSBuild, not CMake.
+For Visual Studio: open the PayRollix++ folder and choose the vs2026 CMake preset;
+the same Qt discovery runs during configuration. Set PAYROLLIX_QT_ROOT in the
+CMake cache if you need to select a specific kit. Or run build.ps1 first and open
+the generated build\Payrollix.sln. The old checked-in WinUI solution and project
+have been removed. Run build.ps1 after IDE builds to deploy runtime files,
+or use CMake's install target into a separate deployment directory.
+
+The project targets the v145 toolset; older Visual Studio installations are not
+selected by the build script. The Windows CI workflow also explicitly uses
+Visual Studio 2026 and builds the native tests with the same toolset.
 
 Release output: bin\x64\Release\PayrollApp.exe
 Distribute the ENTIRE Release directory, not the executable alone. The build
-copies the Windows App SDK runtime beside the executable. Install the x64
+copies Qt runtime DLLs and the platforms\qwindows.dll plugin beside the executable.
+Include the applicable Qt license notices and fulfill your distribution license
+obligations; windeployqt alone is not a licensing compliance process. Install the x64
 Visual C++ Redistributable separately on target computers. Run as a regular
 Windows user; administrator privileges are not required for normal operation.
 
@@ -394,9 +453,14 @@ may restore production information. Backups are not encrypted by this app.
 - Missing runtime DLLs: deploy the full Release directory and install the x64
   Visual C++ Redistributable. Copying only PayrollApp.exe is insufficient.
 - MSBuild or SDK missing: install the prerequisites and SDK version listed
-  above. Build from build.ps1 or Visual Studio, not the old Qt/CMake commands.
-- Missing NuGet packages: allow the approved NuGet feed through company
-  controls and run build.ps1 again. Native dependency versions are explicit.
+  above. Use build.ps1, or configure CMake with the Visual Studio 2026 preset.
+- Qt not found: install Qt 6.9+ with the MSVC x64 desktop kit and retry.
+  If Qt is in a custom location, pass -QtRoot pointing to that kit folder,
+  not its bin folder. The error also appears if only incompatible or incomplete
+  kits are installed. The build prints the selected kit when discovery succeeds.
+  Remove an obsolete generated build directory when switching toolchains.
+- Qt platform plugin missing: run build.ps1 again and deploy the entire output
+  folder, including platforms\qwindows.dll; do not copy only the executable.
 - PDF unavailable: enable Microsoft Print to PDF in Windows Features or
   export HTML and use an approved external print workflow.
 - Cannot open data or export: check folder permissions, available disk space
@@ -420,10 +484,12 @@ Verification commands from PayRollix++:
 On Linux, core tests need a C++17 compiler, CMake and SQLite development files.
 Their test-only password provider does not verify Windows cryptography.
 On Windows, core tests link real BCrypt and verify native password hashing.
-The GitHub workflow builds the WinUI application and runs native core tests
+The GitHub workflow builds the Qt application and runs native core tests
 on a Windows compile host. It does not exercise the interactive interface.
 
-This Linux workspace cannot compile or display the Windows application.
+This Linux workspace cannot link or run the Windows application. It can compile
+Qt interface objects with -DPAYROLLIX_CHECK_QT_UI=ON in the tests project;
+that check does not produce a non-Windows executable or test native dialogs.
 Before rollout, verify sign-in, employee creation/editing, department and period
 management, payroll snapshots, CSV, Unicode payslips, PDF/printing, backup and
 restore on Windows 11. Test dark/light themes, keyboard use, display scaling
