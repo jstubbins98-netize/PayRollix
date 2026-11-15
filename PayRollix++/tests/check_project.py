@@ -3,6 +3,8 @@
 from pathlib import Path
 import re
 import sqlite3
+import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +29,14 @@ def main():
     assert '-version "[18.0,19.0)"' in build_script
     assert '-G "Visual Studio 18 2026" -A x64 -T v145' in build_script
     assert "windeployqt.exe" in build_script
+    assert "cmake\\FindPayrollQt.cmake" in build_script
+    assert "payrollix_find_qt(_payrollix_qt)" in cmake
+    launcher = (ROOT / "build.bat").read_text()
+    assert '-ExecutionPolicy Bypass -File "%~dp0build.ps1" %*' in launcher
+    assert 'set "exitCode=%errorlevel%"' in launcher
+    assert "exit /b %exitCode%" in launcher
+    assert 'if "%~1"=="" pause' in launcher
+    assert "Set-ExecutionPolicy" not in launcher, "Do not persistently weaken execution policy"
     workflow = (ROOT.parent / ".github/workflows/windows-build.yml").read_text()
     assert "runs-on: windows-2025-vs2026" in workflow
     assert "jurplel/install-qt-action@" in workflow
@@ -48,7 +58,8 @@ def main():
         assert {"users", "payroll", "departments", "pay_periods", "employment_history", "audit_log",
                 "payslips", "winui_payslip_details"}.issubset(tables)
         assert db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
-    print("PASS: Qt build/deployment, VS 2026 toolchain, Win11 gate, schema, and identical manuals.")
+    subprocess.run([sys.executable, str(ROOT / "tests/test_qt_discovery.py")], check=True)
+    print("PASS: Qt discovery/build/deployment, VS 2026 toolchain, Win11 gate, schema, and identical manuals.")
     print("This is NOT a Windows compiler or interactive runtime check.")
 
 

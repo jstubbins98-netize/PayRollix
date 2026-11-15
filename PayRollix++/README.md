@@ -71,23 +71,59 @@ prerequisites above installed, and run:
 
 ```powershell
 cd PayRollix++
+.\build.bat -Launch
+```
+
+The build automatically looks for Qt 6.9 or newer with the shared MSVC x64
+desktop libraries, Widgets, Windows platform plugin and deployment tools.
+It checks QTDIR, QT_ROOT_DIR, Qt6_DIR and CMAKE_PREFIX_PATH settings, Qt tools on
+PATH, then common locations such as C:\Qt, other drive-root Qt folders,
+your user Qt folder, Local App Data and Program Files Qt folders.
+The newest compatible kit within the first successful search group is chosen,
+and its path and version are printed before the build.
+
+If no compatible kit is found, compilation stops with an error explaining
+what to install and how to select a custom folder. Older versions, MinGW,
+ARM64 and incomplete kits are rejected. Qt is not downloaded automatically.
+
+For a custom location, this explicit PowerShell command remains supported:
+
+```powershell
+cd PayRollix++
 .\build.ps1 -QtRoot C:\Qt\6.9.3\msvc2022_64 -Launch
 ```
 
+To run through the Windows BAT launcher instead:
+
+```powershell
+cd PayRollix++
+.\build.bat -QtRoot "C:\Qt\6.9.3\msvc2022_64" -Launch
+```
+
+Run either command block from the project root, not one after the other.
+The BAT launcher permits script execution only for its PowerShell process;
+it does not change saved execution policies, unblock files permanently, or
+request administrator access. Organization-enforced policies still apply.
+It forwards options to build.ps1 and returns its exit code. You can also
+double-click build.bat to find Qt automatically; with no options,
+it builds without launching the app and waits for a key before closing.
+
 On a Windows 11 development workstation:
 1. Open PowerShell in the PayRollix++ directory.
-2. Run: .\build.ps1 -QtRoot C:\Qt\6.9.3\msvc2022_64
+2. Run: .\build.ps1 (or .\build.bat) to discover Qt and build.
 3. To build and launch, add: -Launch
 4. For a debug build, add: -Configuration Debug
-5. Alternatively set QTDIR to the Qt kit folder and run .\build.ps1.
+5. Optionally select a kit with -QtRoot or one of the environment settings above.
+   An invalid explicit -QtRoot fails rather than silently choosing another kit.
 
 The script locates Visual Studio 2026, configures CMake with the v145 toolset,
 builds the application and runs Qt's windeployqt to copy its runtime files.
 It does not install Visual Studio or Qt, or change PowerShell execution policy.
 Follow company policy if scripts are blocked; do not disable protections globally.
 
-For Visual Studio: set QTDIR before starting the IDE, open the PayRollix++
-folder and choose the vs2026 CMake preset. Or run build.ps1 first and open
+For Visual Studio: open the PayRollix++ folder and choose the vs2026 CMake preset;
+the same Qt discovery runs during configuration. Set PAYROLLIX_QT_ROOT in the
+CMake cache if you need to select a specific kit. Or run build.ps1 first and open
 the generated build\Payrollix.sln. The old checked-in WinUI solution and project
 have been removed. Run build.ps1 after IDE builds to deploy runtime files,
 or use CMake's install target into a separate deployment directory.
@@ -418,7 +454,10 @@ may restore production information. Backups are not encrypted by this app.
   Visual C++ Redistributable. Copying only PayrollApp.exe is insufficient.
 - MSBuild or SDK missing: install the prerequisites and SDK version listed
   above. Use build.ps1, or configure CMake with the Visual Studio 2026 preset.
-- Qt not found: pass -QtRoot pointing to the MSVC x64 kit, not its bin folder.
+- Qt not found: install Qt 6.9+ with the MSVC x64 desktop kit and retry.
+  If Qt is in a custom location, pass -QtRoot pointing to that kit folder,
+  not its bin folder. The error also appears if only incompatible or incomplete
+  kits are installed. The build prints the selected kit when discovery succeeds.
   Remove an obsolete generated build directory when switching toolchains.
 - Qt platform plugin missing: run build.ps1 again and deploy the entire output
   folder, including platforms\qwindows.dll; do not copy only the executable.

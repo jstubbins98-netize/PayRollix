@@ -8,9 +8,6 @@
       "architecture": "x64",
       "toolset": "v145",
       "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_PREFIX_PATH": "$env{QTDIR}"
-      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
